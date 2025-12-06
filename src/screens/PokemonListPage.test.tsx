@@ -4,7 +4,14 @@ import { PokemonListPage } from './PokemonListPage';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('src/hooks/useGetPokemons', () => ({
-  useGetPokemons: jest.fn().mockReturnValue({ data: [{ id: '1', name: 'Bulbasaur' }] }),
+  useGetPokemons: jest.fn().mockReturnValue({
+    data: [{ id: '1', name: 'Bulbasaur' }],
+    loading: false,
+    error: null,
+    detail: null,
+    detailLoading: false,
+    detailError: null,
+  }),
 }));
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
@@ -25,7 +32,7 @@ describe('PokemonListPage', () => {
       await user.click(getByText('Bulbasaur'));
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(/* The route to Bulbasaur */);
+    expect(mockNavigate).toHaveBeenCalledWith('/list/pokemon/1');
   });
   test.todo('typing in the search bar filters the results');
 });

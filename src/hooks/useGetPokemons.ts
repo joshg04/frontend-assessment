@@ -9,7 +9,10 @@ export interface Pokemon {
 }
 
 export interface PokemonDetail extends Pokemon {
-  // Details
+  weight?: number;
+  height?: number;
+  captureRate?: number;
+  stats?: Array<{ name: string; value: number }>;
 }
 
 export const GET_POKEMONS = gql`
@@ -44,7 +47,7 @@ export const GET_POKEMONS = gql`
 `;
 
 export const GET_POKEMON_DETAILS = gql`
-  query GetPokemonDetails($id: String!) {
+  query GetPokemonDetails($id: Int!) {
     pokemon(where: { id: { _eq: $id } }) {
       id
       pokemonspecy {
@@ -76,15 +79,30 @@ export const GET_POKEMON_DETAILS = gql`
 `;
 
 // Search should be done client-side for the mid-level assessment. Uncomment for the senior assessment.
-export const useGetPokemons = (/* search?: string */): {
+export const useGetPokemons = (
+  detailId?: string, // pass in detailId to grab pokemon detail
+): {
   data: Pokemon[];
   loading: boolean;
   error: useQuery.Result['error'];
+  detail: PokemonDetail | null;
+  detailLoading: boolean;
+  detailError: useQuery.Result['error'];
 } => {
   const { data, loading, error } = useQuery<{ pokemon: any[] }>(GET_POKEMONS, {
     variables: {
       search: '', // `.*${search}.*`,
     },
+  });
+
+  const shouldSkipDetail = !detailId || Number.isNaN(parseInt(detailId, 10));
+  const {
+    data: detailData,
+    loading: detailLoading,
+    error: detailError,
+  } = useQuery<{ pokemon: any[] }>(GET_POKEMON_DETAILS, {
+    variables: { id: parseInt(detailId || '0', 10) },
+    skip: shouldSkipDetail,
   });
 
   return {
@@ -93,9 +111,30 @@ export const useGetPokemons = (/* search?: string */): {
         (p): Pokemon => ({
           id: p.id,
           name: p.pokemonspecy.pokemonspeciesnames?.[0]?.name,
+          types: p.pokemontypes?.map((pt: any) => pt.type?.typenames?.[0]?.name),
+          sprite: p.pokemonsprites?.[0]?.sprites,
         }),
       ) ?? [],
     loading,
     error,
+    detail: detailData?.pokemon?.[0]
+      ? {
+          id: detailData.pokemon[0].id,
+          name: detailData.pokemon[0].pokemonspecy.pokemonspeciesnames?.[0]?.name,
+          types: detailData.pokemon[0].pokemontypes?.map(
+            (pt: any) => pt.type?.typenames?.[0]?.name,
+          ),
+          sprite: detailData.pokemon[0].pokemonsprites?.[0]?.sprites,
+          weight: detailData.pokemon[0].weight,
+          height: detailData.pokemon[0].height,
+          captureRate: detailData.pokemon[0].pokemonspecy.capture_rate,
+          stats: detailData.pokemon[0].pokemonstats?.map((ps: any) => ({
+            name: ps.stat.name,
+            value: ps.base_stat,
+          })),
+        }
+      : null,
+    detailLoading: shouldSkipDetail ? false : detailLoading,
+    detailError: shouldSkipDetail ? undefined : detailError,
   };
 };
